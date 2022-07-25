@@ -1,10 +1,13 @@
 // Modules
-import { Request, Router } from 'express';
-import { body, validationResult } from 'express-validator';
+import { body } from 'express-validator';
+import { Request, Response, Router } from 'express';
 
 // Controllers
 import { login, register, validateToken } from '../controllers/login';
+
+// Middlewares
 import validateBody from '../middlewares/validateBody';
+import validateNewToken from '../middlewares/validateNewToken';
 
 const router = Router();
 
@@ -13,9 +16,12 @@ router.get('/', (req, res) => {
 }); 
 
 router.post('/', 
-  body('userName').isString(),
-  body('password').isString().isLength({ min:8 }), 
-  (req, res) => {
+  [
+    body('userName').isString(),
+    body('password').isString().isLength({ min:8 }), 
+    validateBody
+  ],
+  (req:Request, res:Response) => {
     try {
       const { userName, password } = req.body;
       login(userName, password, res);
@@ -26,10 +32,13 @@ router.post('/',
 );
 
 router.post('/register', 
-  body('userName').isString(),
-  body('password').isString().isLength({ min:8 }), 
-  body('privateKey').isString().isLength({ min:8 }),
-  (req:Request, res) => {
+  [
+    body('userName').isString(),
+    body('password').isString().isLength({ min:8 }), 
+    body('privateKey').isString().isLength({ min:8 }),
+    validateBody
+  ],
+  (req:Request, res:Response) => {
     try {
       const { userName, password, privateKey } = req.body;
       register(userName, password, privateKey, res);
@@ -39,13 +48,19 @@ router.post('/register',
   }
 );
 
-router.get('/validate-token', (req, res) => {
-  try {
-    const { authorization } = req.headers;
-    validateToken(authorization as string, res);
-  } catch (err:any) {
-    res.status(500).json({ mssg:'Server error' });
+router.get('/validate-token', 
+  [ 
+    validateNewToken 
+  ],
+  (req:Request, res:Response) => {
+    try {
+      const { savedUser } = req.body;
+      validateToken(savedUser, res);
+    } catch (err:any) {
+      res.status(500).json({ mssg:'Server error' });
+    }
   }
-});
+  
+);
 
 export default router;

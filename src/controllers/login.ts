@@ -13,7 +13,7 @@ import User from '../models/User';
 // Env
 import { APP_KEY } from '../utils/env';
 
-export async function login (userName:string, password:string, res:Response<any>) {
+export async function login (userName:string, password:string, res:Response) {
   const savedUser = await User.findOne({ userName });
   if (savedUser === null) return res.status(400).json({ mssg:'User or password wrong' });
   if (!comparePasswords(savedUser.password as string, password)) return res.status(400).json({ mssg:'User or password wrong' });
@@ -21,10 +21,10 @@ export async function login (userName:string, password:string, res:Response<any>
   res.json({ token });
 }
 
-export async function register (userName:string, password:string, privateKey:string, res:Response<any>) {
+export async function register (userName:string, password:string, privateKey:string, res:Response) {
   if (privateKey !== APP_KEY) return res.status(400).json({ mssg:'Error creating user' });
   const possibleUser = await User.findOne({ userName });
-  if (possibleUser !== null) return res.status(400).json({ mssg:'User in use '});
+  if (possibleUser !== null) return res.status(400).json({ mssg:'User in use' });
   const hash = generateHash(password);
   const user = new User({ userName, password:hash });
   const savedUser = await user.save();
@@ -32,10 +32,7 @@ export async function register (userName:string, password:string, privateKey:str
   res.status(201).json({ token });
 }
 
-export async function validateToken (token:string, res:Response<any>) {
-  const { id } = unwrapToken(token);
-  const savedUser = await User.findById(id);
-  if (savedUser === null) return res.status(403).json({ mssg:'Bad token' });
-  const newToken = generateToken(id);
-  res.json({ token:newToken });
+export async function validateToken (savedUser:any, res:Response) {
+  const token = generateToken(savedUser.id);
+  res.status(200).json({ token });
 }

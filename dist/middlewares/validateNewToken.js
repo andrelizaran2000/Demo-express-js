@@ -39,68 +39,32 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateToken = exports.register = exports.login = void 0;
-var generateHash_1 = __importDefault(require("../helpers/generateHash"));
-var generateToken_1 = __importDefault(require("../helpers/generateToken"));
-var comparePasswords_1 = __importDefault(require("../helpers/comparePasswords"));
+// Helpers
+var unwrapToken_1 = __importDefault(require("../helpers/unwrapToken"));
 // Models
 var User_1 = __importDefault(require("../models/User"));
-// Env
-var env_1 = require("../utils/env");
-function login(userName, password, res) {
+function validateToken(req, res, next) {
     return __awaiter(this, void 0, void 0, function () {
-        var savedUser, token;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0: return [4 /*yield*/, User_1.default.findOne({ userName: userName })];
-                case 1:
-                    savedUser = _a.sent();
-                    if (savedUser === null)
-                        return [2 /*return*/, res.status(400).json({ mssg: 'User or password wrong' })];
-                    if (!(0, comparePasswords_1.default)(savedUser.password, password))
-                        return [2 /*return*/, res.status(400).json({ mssg: 'User or password wrong' })];
-                    token = (0, generateToken_1.default)(savedUser.id);
-                    res.json({ token: token });
-                    return [2 /*return*/];
-            }
-        });
-    });
-}
-exports.login = login;
-function register(userName, password, privateKey, res) {
-    return __awaiter(this, void 0, void 0, function () {
-        var possibleUser, hash, user, savedUser, token;
+        var authorization, tokenPayload, savedUser;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    if (privateKey !== env_1.APP_KEY)
-                        return [2 /*return*/, res.status(400).json({ mssg: 'Error creating user' })];
-                    return [4 /*yield*/, User_1.default.findOne({ userName: userName })];
+                    authorization = req.headers.authorization;
+                    if (!authorization)
+                        return [2 /*return*/, res.status(403).json({ mssg: 'No token' })];
+                    tokenPayload = (0, unwrapToken_1.default)(authorization);
+                    if (tokenPayload === null)
+                        return [2 /*return*/, res.status(403).json({ mssg: 'Bad token' })];
+                    return [4 /*yield*/, User_1.default.findById(tokenPayload.id)];
                 case 1:
-                    possibleUser = _a.sent();
-                    if (possibleUser !== null)
-                        return [2 /*return*/, res.status(400).json({ mssg: 'User in use' })];
-                    hash = (0, generateHash_1.default)(password);
-                    user = new User_1.default({ userName: userName, password: hash });
-                    return [4 /*yield*/, user.save()];
-                case 2:
                     savedUser = _a.sent();
-                    token = (0, generateToken_1.default)(savedUser.id);
-                    res.status(201).json({ token: token });
+                    if (savedUser === null)
+                        return [2 /*return*/, res.status(403).json({ mssg: 'Bad token' })];
+                    req.body.savedUser = savedUser;
+                    next();
                     return [2 /*return*/];
             }
         });
     });
 }
-exports.register = register;
-function validateToken(savedUser, res) {
-    return __awaiter(this, void 0, void 0, function () {
-        var token;
-        return __generator(this, function (_a) {
-            token = (0, generateToken_1.default)(savedUser.id);
-            res.status(200).json({ token: token });
-            return [2 /*return*/];
-        });
-    });
-}
-exports.validateToken = validateToken;
+exports.default = validateToken;
