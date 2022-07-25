@@ -23,6 +23,8 @@ export async function login (userName:string, password:string, res:Response<any>
 
 export async function register (userName:string, password:string, privateKey:string, res:Response<any>) {
   if (privateKey !== APP_KEY) return res.status(400).json({ mssg:'Error creating user' });
+  const possibleUser = await User.findOne({ userName });
+  if (possibleUser !== null) return res.status(400).json({ mssg:'User in use '});
   const hash = generateHash(password);
   const user = new User({ userName, password:hash });
   const savedUser = await user.save();
